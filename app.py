@@ -1,5 +1,6 @@
 from htmltools._core import Tag
 from shiny import App, ui, reactive, render
+import csv
 import os
 import polars as pl
 import io
@@ -26,7 +27,19 @@ def fetch_data():
     res = requests.get(api_url, headers=headers)
     if res.status_code != 200:
         raise RuntimeError(f"Failed to fetch file: {res.status_code}\n{res.text}")
-    return pl.read_csv(io.StringIO(res.text))
+    try:
+        return pl.read_csv(io.StringIO(res.text))
+    except pl.exceptions.ComputeError as e:
+        # Fallback for ragged CSVs: keep only rows matching the header width
+        # instead of crashing at startup.
+        print(f"⚠️ Polars could not parse CSV ({e}); falling back to tolerant parser")
+        rows = list(csv.reader(io.StringIO(res.text.lstrip("﻿"))))
+        header = rows[0]
+        data = [r for r in rows[1:] if len(r) == len(header)]
+        dropped = len(rows) - 1 - len(data)
+        if dropped:
+            print(f"⚠️ Dropped {dropped} ragged row(s)")
+        return pl.DataFrame(data, schema=header, orient="row")
 
 
 raw_df = fetch_data()
