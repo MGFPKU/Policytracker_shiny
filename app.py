@@ -58,11 +58,11 @@ regions: list[str] = df[i18n("经济体")].drop_nulls().to_list()
 all_regions = sorted(set(r.strip() for entry in regions for r in entry.split(i18n("；"))))
 
 # Canonical policy type taxonomy. CSV values are multi-select (e.g.
-# "碳市场；信息披露"); the dropdown shows the 10 single categories and the
+# "碳市场或碳税；信息披露"); the dropdown shows the 10 single categories and the
 # filter matches any policy containing the selected category.
 POLICY_TYPES = [
     "目标与战略",
-    "碳市场",
+    "碳市场或碳税",
     "财政政策",
     "货币与信贷政策",
     "分类法",
@@ -215,7 +215,7 @@ def server(input, output, session):
             data = data.filter(pl.col(i18n("经济体")).str.contains(input.region()))
         if input.type() != i18n("全部"):
             # Multi-select values: match if the selected type is one of the
-            # split parts, e.g. "碳市场；信息披露" matches "碳市场".
+            # split parts, e.g. "碳市场或碳税；信息披露" matches "碳市场或碳税".
             data = data.filter(
                 pl.col(i18n("政策类型")).str.split(i18n("；")).list.contains(input.type())
             )
